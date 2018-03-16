@@ -1,0 +1,116 @@
+---
+title: "Project"
+output: html_document
+
+---
+### Jorge Aira
+### Tuesday,March 14 2018
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+##Introduction & Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+##Data
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+## Loading the Data
+Loading the libraries and the data from the URl
+```{r message=FALSE,warning=FALSE}
+library(caret)
+library(rattle)
+library(randomForest)
+dataTrain <- read.table("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",header=TRUE,sep=",",na.string="NA")
+dataTesting <- read.table("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",header=TRUE,sep=",",na.strings = "NA")
+```
+
+## Data Cleaning
+First of all, we study the dimension of the data sets and we have 19622 observations for the Train data and 20 for the Test. The number of variables is 160, the same for the two datasets.
+We clean the varibles with missing values or empty values and also the first 7 observations because they are not required for the porject.
+```{r}
+dim(dataTrain)
+dim(dataTesting)
+Training<-  dataTrain[,colSums(is.na(dataTrain)| dataTrain=="")==0]
+Test <- dataTesting[,colSums(is.na(dataTesting)|dataTesting=="")==0]
+Training<- Training[,-c(1:7)]
+Test <- Test[,-c(1:7)]
+```
+```{r}
+dim(Training)
+dim(Test)
+```
+
+##Data Splicing
+
+We create a partition of the Training dataset for training data (70%) and for testing the models (30%)
+
+```{r}
+set.seed(1235)
+inTrain <- createDataPartition(Training$classe,p=0.7,list=FALSE)
+trainData <-Training[inTrain,]
+testing <- Training[-inTrain,]
+```
+
+##Prediction Models
+
+We are looking for a qualitative prediction, we try with the classification tree  and random forest models for a good accuracy.
+
+To avoid an overfitting we use the technique of cross-validation.We select k = 5
+
+```{r}
+ControlTrain <- trainControl(method="cv",number=5)
+```
+
+### Classification Tree
+```{r}
+modelCT<- train(classe~., data = trainData ,method="rpart",trControl=ControlTrain)
+PredictionCT <- predict(modelCT,newdata=testing)
+CMCT <- confusionMatrix(testing$classe,PredictionCT) 
+```
+
+```{r echo=FALSE}
+CMCT
+```
+We can see that there is low accuracy (49%) then we try with the random forest model
+
+### Random Forest
+
+```{r}
+set.seed(1253)
+modelRF<- train(classe~.,data=trainData, method="rf", trControl=ControlTrain)
+predictionRF <- predict(modelRF,newdata=testing)
+CMRF <- confusionMatrix(testing$classe,predictionRF)
+```
+
+```{r echo=FALSE}
+CMRF
+```
+This is a good accuracy level(99%) for the prediction study 
+
+##Predicting Results on the Test Data
+
+We use the Random Forest model for the prediction of the results on the Test Data
+
+```{r}
+modelRF<- train(classe~.,data=trainData, method="rf", trControl=ControlTrain)
+predictionTest <- predict(modelRF, newdata=Test)
+```
+This is the result of the prediction of data Test using the Random Forest model
+```{r echo=FALSE}
+predictionTest
+```
+
+
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har
+
+
+
